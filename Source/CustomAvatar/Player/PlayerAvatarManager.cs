@@ -429,7 +429,9 @@ namespace CustomAvatar.Player
         {
             if (!Directory.Exists(kCustomAvatarsPath)) return new List<string>();
 
-            return Directory.GetFiles(kCustomAvatarsPath, "*.avatar", SearchOption.TopDirectoryOnly).Select(f => Path.GetFileName(f)).OrderBy(f => f).ToList();
+            List<string> result = Directory.GetFiles(kCustomAvatarsPath, "*.avatar", SearchOption.TopDirectoryOnly).Select(f => Path.GetFileName(f)).OrderBy(f => f).ToList();
+            result.AddRange(Directory.GetFiles(PlayerAvatarManager.kCustomAvatarsPath, "*.vrm", SearchOption.TopDirectoryOnly).Select(f => Path.GetFileName(f)).OrderBy(f => f).ToList());
+            return result;
         }
 
         private void OnActiveCameraChanged(CameraTracker activeCamera)

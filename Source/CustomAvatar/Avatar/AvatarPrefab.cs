@@ -16,6 +16,7 @@
 
 extern alias BeatSaberFinalIK;
 
+using System;
 using System.Linq;
 using AvatarScriptPack;
 using CustomAvatar.Exceptions;
@@ -32,6 +33,14 @@ namespace CustomAvatar.Avatar
     [DisallowMultipleComponent]
     public class AvatarPrefab : MonoBehaviour
     {
+        public enum AvatarFormat
+        {
+            AVATAR_FORMAT_CUSTOM,
+            AVATAR_FORMAT_VRM,
+        };
+
+        public AvatarFormat avatarFormat { get; private set; }
+
         /// <summary>
         /// The <see cref="AvatarDescriptor"/> retrieved from the root object on the prefab.
         /// </summary>
@@ -99,6 +108,7 @@ namespace CustomAvatar.Avatar
         [UsedImplicitly]
         private void Construct(ILoggerFactory loggerFactory, DiContainer container)
         {
+            avatarFormat = GetComponentInChildren<VRM.VRMFirstPerson>() ? AvatarFormat.AVATAR_FORMAT_VRM : AvatarFormat.AVATAR_FORMAT_CUSTOM;
             descriptor = GetComponent<AvatarDescriptor>();
 
             if (descriptor == null)
@@ -154,7 +164,10 @@ namespace CustomAvatar.Avatar
                     }
                 }
 
-                FixTrackingReferences(vrikManager);
+                if (avatarFormat == AvatarFormat.AVATAR_FORMAT_CUSTOM)
+                {
+                    FixTrackingReferences(vrikManager);
+                }
             }
 
             if (transform.localPosition.sqrMagnitude > 0)
@@ -165,7 +178,10 @@ namespace CustomAvatar.Avatar
             PoseManager poseManager = GetComponentInChildren<PoseManager>();
 
             isIKAvatar = vrikManager != null && vrikManager.areReferencesFilled;
-            supportsFingerTracking = poseManager && poseManager.isValid;
+            if (avatarFormat == AvatarFormat.AVATAR_FORMAT_CUSTOM)
+                supportsFingerTracking = poseManager && poseManager.isValid;
+            else
+                supportsFingerTracking = false;
 
             eyeHeight = GetEyeHeight();
             armSpan = GetArmSpan(vrikManager);
@@ -351,11 +367,19 @@ namespace CustomAvatar.Avatar
                 return BeatSaberUtilities.kDefaultPlayerArmSpan;
             }
 
-            float leftArmLength = Vector3.Distance(leftShoulder.position, leftUpperArm.position) + Vector3.Distance(leftUpperArm.position, leftLowerArm.position) + Vector3.Distance(leftLowerArm.position, leftWrist.position) + Vector3.Distance(leftWrist.position, leftHand.position);
-            float rightArmLength = Vector3.Distance(rightShoulder.position, rightUpperArm.position) + Vector3.Distance(rightUpperArm.position, rightLowerArm.position) + Vector3.Distance(rightLowerArm.position, rightWrist.position) + Vector3.Distance(rightWrist.position, rightHand.position);
-            float shoulderToShoulderDistance = Vector3.Distance(leftShoulder.position, rightShoulder.position);
+            float totalLength;
+            if (avatarFormat == AvatarFormat.AVATAR_FORMAT_VRM)
+            {
+                totalLength = Math.Abs((leftWrist.transform.position - rightWrist.transform.position).magnitude); //NOTE: VRM AvatarPrefab is in the 'T'-Pose.
+            }
+            else
+            {
+                float leftArmLength = Vector3.Distance(leftShoulder.position, leftUpperArm.position) + Vector3.Distance(leftUpperArm.position, leftLowerArm.position) + Vector3.Distance(leftLowerArm.position, leftWrist.position) + Vector3.Distance(leftWrist.position, leftHand.position);
+                float rightArmLength = Vector3.Distance(rightShoulder.position, rightUpperArm.position) + Vector3.Distance(rightUpperArm.position, rightLowerArm.position) + Vector3.Distance(rightLowerArm.position, rightWrist.position) + Vector3.Distance(rightWrist.position, rightHand.position);
+                float shoulderToShoulderDistance = Vector3.Distance(leftShoulder.position, rightShoulder.position);
 
-            float totalLength = leftArmLength + shoulderToShoulderDistance + rightArmLength;
+                totalLength = leftArmLength + shoulderToShoulderDistance + rightArmLength;
+            }
 
             _logger.LogTrace($"Measured arm span: {totalLength} m");
 

@@ -15,10 +15,12 @@
 //  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
 using CustomAvatar.Logging;
+using HarmonyLib;
 using UnityEngine;
 using UnityEngine.U2D;
 using Zenject;
@@ -32,6 +34,7 @@ namespace CustomAvatar.Utilities
 
         private readonly ILogger<AssetLoader> _logger;
         private readonly TaskCompletionSource<VoidResult> _taskCompletionSource = new();
+        private static readonly Dictionary<string, Shader> kVrmShaders = new();
 
         protected AssetLoader(ILogger<AssetLoader> logger)
         {
@@ -44,12 +47,15 @@ namespace CustomAvatar.Utilities
 
         internal SpriteAtlas uiSpriteAtlas { get; private set; }
 
+        internal Task<bool> vrmShaderLoad { get; private set; }
+
         public Task WaitForAssetsLoadedAsync() => _taskCompletionSource.Task;
 
         public async void Initialize()
         {
             try
             {
+                vrmShaderLoad = LoadVrmAssetsAsync();
                 await LoadAssetsAsync();
                 _taskCompletionSource.SetResult(default);
             }
@@ -109,6 +115,37 @@ namespace CustomAvatar.Utilities
             }
 
             await assetBundle.UnloadAsync(false);
+        }
+
+        public async Task<bool> LoadVrmAssetsAsync()
+        {
+            using Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("CustomAvatar.Resources.vrmmaterialchange_bs_shaders.assets");
+            AssetBundleCreateRequest assetBundleCreateRequest = await AssetBundle.LoadFromStreamAsync(stream);
+            AssetBundle assetBundle = assetBundleCreateRequest.assetBundle;
+
+            kVrmShaders.Clear();
+
+            if (assetBundle == null)
+            {
+                _logger.LogError("Failed to load VRM asset bundle");
+                return false;
+            }
+
+            foreach (Object asset in (await assetBundle.LoadAllAssetsAsync<Shader>()).allAssets)
+            {
+                kVrmShaders[asset.name] = (Shader)asset;
+            }
+
+            await assetBundle.UnloadAsync(false);
+            return true;
+        }
+
+        // HACK: expose our shaders through `Shader.Find()` where UniVRM looks for them; this should really be done at the IL level in a post-build step
+        [HarmonyPatch(typeof(Shader), nameof(Shader.Find))]
+        public class Shader_Find
+        {
+            private static bool Prefix(string name, ref Shader __result) =>
+                !kVrmShaders.TryGetValue(name, out __result);
         }
     }
 }

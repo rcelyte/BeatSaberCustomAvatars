@@ -2,6 +2,20 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <Import Project="$(ProjectDir)..\Common.props" />
 
+  <PropertyGroup>
+    <NoWarn>CS1570;CS1572;CS1573;CS1587;CS1591;CS1711</NoWarn>
+    <DefineConstants>NET_4_6;UNITY_2017_1_OR_NEWER;UNITY_2017_3_OR_NEWER;UNITY_2018_1_OR_NEWER;UNITY_2018_2_OR_NEWER;UNITY_2019;UNITY_2019_1_OR_NEWER;UNITY_2020_1_OR_NEWER;UNITY_2020_2_OR_NEWER;UNITY_2020_3_OR_NEWER;UNITY_2021_2_OR_NEWER;UNITY_2021_OR_NEWER;UNITY_2022_3_OR_NEWER;UNITY_2022_OR_NEWER;UNITY_5_5_OR_NEWER;UNITY_5_6_OR_NEWER</DefineConstants>
+    <!-- <DefineConstants>UNITY_2022_2_OR_NEWER</DefineConstants> -->
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../UniVRM/Assets/UniGLTF/Runtime/**/*.cs" />
+    <Compile Include="../../UniVRM/Assets/UniGLTF/UniUnlit/Runtime/**/*.cs" />
+    <Compile Include="../../UniVRM/Assets/VRM/MToon/Runtime/**/*.cs" />
+    <Compile Include="../../UniVRM/Assets/VRM/Runtime/**/*.cs" />
+    <Compile Include="../../UniVRM/Assets/VRM10/MToon10/Runtime/**/*.cs" />
+    <Compile Include="../../UniVRM/Assets/VRM10/Runtime/**/*.cs" />
+    <Compile Include="../../UniVRM/Assets/VRM10/vrmlib/Runtime/**/*.cs" />
+  </ItemGroup>
   <ItemGroup>
     <Reference Include="0Harmony" />
     <Reference Include="AssetBundleLoadingTools" />
@@ -36,6 +50,7 @@
     <Reference Include="Unity.InputSystem" />
     <Reference Include="Unity.Mathematics" />
     <Reference Include="Unity.TextMeshPro" />
+    <Reference Include="Unity.Timeline" />
     <Reference Include="Unity.XR.Hands" Publicize="True" />
     <Reference Include="Unity.XR.OpenXR" />
     <Reference Include="UnityEngine" />

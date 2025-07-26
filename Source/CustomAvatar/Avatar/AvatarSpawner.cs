@@ -92,6 +92,12 @@ namespace CustomAvatar.Avatar
 
             // SpawnedAvatar needs to be instantiated first since other behaviours depend on it
             SpawnedAvatar spawnedAvatar = subContainer.InstantiateComponent<SpawnedAvatar>(avatarInstance);
+            spawnedAvatar.avatarFormat = avatar.avatarFormat;
+            if (spawnedAvatar.avatarFormat == AvatarPrefab.AvatarFormat.AVATAR_FORMAT_VRM)
+            {
+                spawnedAvatar.gameObject.SetActive(true);
+            }
+
             subContainer.Bind<SpawnedAvatar>().FromInstance(spawnedAvatar);
 
             foreach ((Type type, Func<AvatarPrefab, bool> condition) in _componentsToAdd)
@@ -101,6 +107,12 @@ namespace CustomAvatar.Avatar
                     _logger.LogInformation($"Adding component '{type.FullName}'");
                     avatarInstance.AddComponent(type);
                 }
+            }
+
+            if (spawnedAvatar.avatarFormat == AvatarPrefab.AvatarFormat.AVATAR_FORMAT_VRM)
+            {
+                if (spawnedAvatar.ik == null && spawnedAvatar.GetComponent<AvatarIK>())
+                    spawnedAvatar.VRM_SetAvatarIK(spawnedAvatar.GetComponent<AvatarIK>());
             }
 
             subContainer.InjectGameObject(avatarInstance);

@@ -1,0 +1,3 @@
+[submodule "UniVRM"]
+	path = UniVRM
+	url = https://github.com/vrm-c/UniVRM.git

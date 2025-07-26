@@ -18,6 +18,7 @@ extern alias BeatSaberFinalIK;
 
 using CustomAvatar.Logging;
 using CustomAvatar.Tracking;
+using CustomAvatar.VRMAvatar;
 using JetBrains.Annotations;
 using UnityEngine;
 using Zenject;
@@ -30,6 +31,11 @@ namespace CustomAvatar.Avatar
     [DisallowMultipleComponent]
     public class SpawnedAvatar : MonoBehaviour
     {
+        /// <summary>
+        /// The format of the avatar [normal, VRM, etc].
+        /// </summary>
+        public AvatarPrefab.AvatarFormat avatarFormat { get; set; }
+        
         /// <summary>
         /// The <see cref="AvatarPrefab"/> used to spawn this avatar.
         /// </summary>
@@ -48,6 +54,7 @@ namespace CustomAvatar.Avatar
         public Transform rightLeg { get; private set; }
         public Transform pelvis { get; private set; }
 
+        public void VRM_SetAvatarIK(AvatarIK _ik) { ik = _ik; }
         internal AvatarTransformTracking transformTracking { get; private set; }
         internal AvatarIK ik { get; private set; }
         internal AvatarFingerTracking fingerTracking { get; private set; }
@@ -60,20 +67,33 @@ namespace CustomAvatar.Avatar
 
         public void SetFirstPersonVisibility(FirstPersonVisibility visibility)
         {
-            switch (visibility)
+            if (avatarFormat == AvatarPrefab.AvatarFormat.AVATAR_FORMAT_CUSTOM)
             {
-                case FirstPersonVisibility.Visible:
-                    SetChildrenToLayer(AvatarLayers.kAlwaysVisible);
-                    break;
+                switch (visibility)
+                {
+                    case FirstPersonVisibility.Visible:
+                        SetChildrenToLayer(AvatarLayers.kAlwaysVisible);
+                        break;
 
-                case FirstPersonVisibility.VisibleWithExclusionsApplied:
-                    SetChildrenToLayer(AvatarLayers.kAlwaysVisible);
-                    ApplyFirstPersonExclusions();
-                    break;
+                    case FirstPersonVisibility.VisibleWithExclusionsApplied:
+                        SetChildrenToLayer(AvatarLayers.kAlwaysVisible);
+                        ApplyFirstPersonExclusions();
+                        break;
 
-                case FirstPersonVisibility.Hidden:
-                    SetChildrenToLayer(AvatarLayers.kOnlyInThirdPerson);
-                    break;
+                    case FirstPersonVisibility.Hidden:
+                        SetChildrenToLayer(AvatarLayers.kOnlyInThirdPerson);
+                        break;
+                }
+            }
+            else if (avatarFormat == AvatarPrefab.AvatarFormat.AVATAR_FORMAT_VRM)
+            {
+                VRM.VRMFirstPerson vrmFirstPerson = GetComponentInChildren<VRM.VRMFirstPerson>();
+                if (vrmFirstPerson)
+                {
+                    VRM.VRMFirstPerson.FIRSTPERSON_ONLY_LAYER = CustomAvatar.Avatar.AvatarLayers.kAlwaysVisible;
+                    VRM.VRMFirstPerson.THIRDPERSON_ONLY_LAYER = CustomAvatar.Avatar.AvatarLayers.kOnlyInThirdPerson;
+                    vrmFirstPerson.Setup();
+                }
             }
         }
 
@@ -106,6 +126,15 @@ namespace CustomAvatar.Avatar
             transformTracking = GetComponent<AvatarTransformTracking>();
             ik = GetComponent<AvatarIK>();
             fingerTracking = GetComponent<AvatarFingerTracking>();
+
+            if (avatarFormat == AvatarPrefab.AvatarFormat.AVATAR_FORMAT_VRM)
+            {
+                VRIKManager ik = GetComponentInChildren<VRIKManager>();
+                if (ik != null)
+                {
+                    VRMHandAndLegPositionConstants.InitIK_AvatarHandAndLegs(ik);
+                }
+            }
         }
 
         protected void OnDestroy()
