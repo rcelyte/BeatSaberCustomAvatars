@@ -14,7 +14,6 @@
 //  You should have received a copy of the GNU Lesser General Public License
 //  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//#define USE_VRM_10
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -30,9 +29,7 @@ using IPA.Utilities;
 using IPA.Utilities.Async;
 using UniGLTF;
 using UnityEngine;
-#if USE_VRM_10
 using UniVRM10;
-#endif
 using VRM;
 using Zenject;
 
@@ -154,7 +151,7 @@ namespace CustomAvatar.Avatar
                     throw new AvatarLoadException("Could not load asset from asset bundle");
                 }
 
-                avatarPrefab = _container.InstantiateComponent<AvatarPrefab>(prefabObject);
+                avatarPrefab = _container.InstantiateComponent<AvatarPrefab>(prefabObject, new object[] {AvatarPrefab.AvatarFormat.AVATAR_FORMAT_CUSTOM});
 
                 prefabObject.hideFlags |= HideFlags.DontUnloadUnusedAsset;
                 prefabObject.name = $"AvatarPrefab({avatarPrefab.descriptor.name})";
@@ -188,42 +185,72 @@ namespace CustomAvatar.Avatar
             }
 
             VRM.BuiltInVrmMToonMaterialImporter.FallbackShaders["VRM/MToon"] = "BeatSaber/MToon";
-            #if USE_VRM_10 //NOTE: Cannot use as VRM1.0 requires Shader MToon10, which has not yet been converted to Beatsaber [and thus is white-out'ed].
-            VRM.BuiltInVrmMToonMaterialImporter.FallbackShaders["VRM10/MToon10"] = VRM.BuiltInVrmMToonMaterialImporter.FallbackShaders["VRM/UnlitTexture"];
-            #endif
 
-#if USE_VRM_10 //NOTE: Cannot use as VRM1.0 requires Shader MToon10, which has not yet been converted to Beatsaber [and thus is white-out'ed].
-            _logger.LogWarning("Vrm1.0: loading.");
-            Vrm10.LoadPathAsync(path); 
-            Vrm10Instance instance = await Vrm10.LoadPathAsync(path);
-#else
-            Debug.LogWarning("Vrm0.x: loading.");
+            // TODO: Port MToon10 to Beat Saber lighting
+            typeof(VRM10.MToon10.MToon10Meta).GetField("UnityShaderName", BindingFlags.Public | BindingFlags.Static)
+                .SetValue(null, VRM.BuiltInVrmMToonMaterialImporter.FallbackShaders["VRM/UnlitTexture"]);
 
             static IMaterialDescriptorGenerator materialCallback(VRM.glTF_VRM_extensions vrm) =>
                 VrmMaterialDescriptorGeneratorUtility.GetValidVrmMaterialDescriptorGenerator(vrm);
-            RuntimeGltfInstance instance = await VrmUtility.LoadAsync(path, new RuntimeOnlyAwaitCaller(), materialCallback);
-#endif
-            //await ShaderRepair.FixShadersOnGameObjectAsync(instance.gameObject);
+            _logger.LogInformation("Vrm: loading.");
+            RuntimeOnlyAwaitCaller awaitCaller = new();
+            Vrm10Instance vrm10Instance = null;
+            MonoBehaviour instance;
+            using (GltfData gltfData = await awaitCaller.Run(() => new GlbLowLevelParser(path, File.ReadAllBytes(path)).Parse()))
+            {
+                if (UniGLTF.Extensions.VRMC_vrm.GltfDeserializer.TryGet(gltfData.GLTF.extensions, out UniGLTF.Extensions.VRMC_vrm.VRMC_vrm _))
+                {
+                    vrm10Instance = await Vrm10.LoadGltfDataAsync(gltfData, canLoadVrm0X: false, showMeshes: true, awaitCaller: awaitCaller);
+                    await vrm10Instance.Vrm.FirstPerson.SetupAsync(vrm10Instance.gameObject, awaitCaller, true,
+                        CustomAvatar.Avatar.AvatarLayers.kAlwaysVisible, CustomAvatar.Avatar.AvatarLayers.kOnlyInThirdPerson);
+                    instance = vrm10Instance;
+                }
+                else if (glTF_VRM_extensions.TryDeserialize(gltfData.GLTF.extensions, out glTF_VRM_extensions _))
+                {
+                    VRMData vrm = new(gltfData);
+                    using (VRMImporterContext loader = new(vrm, materialGenerator: materialCallback(vrm.VrmExtension)))
+                    {
+                        RuntimeGltfInstance vrm0Instance = await loader.LoadAsync(awaitCaller);
+                        vrm0Instance.ShowMeshes();
+                        instance = vrm0Instance;
+                    }
+                }
+                else
+                {
+                    throw new AvatarLoadException("No VRM extension present in GLB file");
+                }
+            }
 
             Animator animator = instance.GetComponent<Animator>();
-
             GameObject avatar = new("Avatar");
+            avatar.SetActive(false);
 
             {
-                Debug.LogWarning("New VRM Avatar");
+                _logger.LogInformation("New VRM Avatar");
                 GameObject.DontDestroyOnLoad(avatar);
 
                 instance.transform.SetParent(avatar.transform, false);
-#if USE_VRM_10
-#else
-                instance.ShowMeshes();
-#endif
 
                 VRIKManager ik = instance.gameObject.AddComponent<VRIKManager>();
                 ik.AutoDetectReferences();
 
-                VRMFirstPerson firstPerson = instance.GetComponent<VRMFirstPerson>();
-                firstPerson.Setup();
+                Transform vrmFirstPersonHeadBone;
+                Vector3 vrmFirstPersonOffset;
+                if (vrm10Instance == null)
+                {
+                    VRMFirstPerson firstPerson = instance.GetComponent<VRMFirstPerson>();
+                    firstPerson.Setup();
+                    vrmFirstPersonHeadBone = firstPerson.FirstPersonBone;
+                    vrmFirstPersonOffset = firstPerson.FirstPersonOffset;
+                }
+                else if (vrm10Instance.TryGetBoneTransform(HumanBodyBones.Head, out vrmFirstPersonHeadBone))
+                {
+                    vrmFirstPersonOffset = vrm10Instance.Vrm.LookAt.OffsetFromHead;
+                }
+                else
+                {
+                    throw new AvatarLoadException("Failed to get head bone for VRM");
+                }
 
                 GameObject leftHand = new("LeftHand");
                 leftHand.transform.SetParent(avatar.transform);
@@ -244,9 +271,6 @@ namespace CustomAvatar.Avatar
                 rightHandTarget.transform.position = VRMHandAndLegPositionConstants.GetWrist(ik.references_rightHand, true); //get wrist position. then curl fingers.
                 ik.solver_rightArm_target = rightHandTarget.transform;
 
-                Transform vrmFirstPersonHeadBone = firstPerson.FirstPersonBone;
-                Vector3 vrmFirstPersonOffset = firstPerson.FirstPersonOffset;
-
                 GameObject head = new("Head");
                 head.transform.SetParent(avatar.transform);
                 head.transform.position = ik.references_head.position;// = vrmFirstPersonHeadBone.position + vrmFirstPersonOffset;
@@ -258,29 +282,31 @@ namespace CustomAvatar.Avatar
                 ik.solver_spine_headTarget = headViewpoint.transform;
 
                 AvatarDescriptor descriptor = avatar.AddComponent<AvatarDescriptor>();
-                if (instance.TryGetComponent(out VRMMeta meta))
+                descriptor.name = "";
+                descriptor.author = "";
+                descriptor.cover = null;
+                if (vrm10Instance != null)
+                {
+                    VRM10ObjectMeta meta = vrm10Instance.Vrm.Meta;
+                    descriptor.name = meta.Name;
+                    descriptor.author = String.Join(", ", meta.Authors);
+                    if (meta.Thumbnail != null)
+                        descriptor.cover = Sprite.Create(meta.Thumbnail, new Rect(0, 0, meta.Thumbnail.width, meta.Thumbnail.height), Vector2.zero);
+                }
+                else if (instance.TryGetComponent(out VRMMeta meta))
                 {
                     descriptor.name = meta.Meta.Title;
                     descriptor.author = meta.Meta.Author;
                     if (meta.Meta.Thumbnail != null)
                         descriptor.cover = Sprite.Create(meta.Meta.Thumbnail, new Rect(0, 0, meta.Meta.Thumbnail.width, meta.Meta.Thumbnail.height), Vector2.zero);
-                    if (descriptor.name.Length == 0)
-                        descriptor.name = "";
-                }
-                else
-                {
-                    descriptor.name = "";
-                    descriptor.author = "";
-                    descriptor.cover = null;
                 }
 
-                if (descriptor.name == "")
+                if (descriptor.name.Length == 0)
                     descriptor.name = System.IO.Path.GetFileName(path);
             }
 
-            AvatarPrefab avatarPrefab = _container.InstantiateComponent<AvatarPrefab>(avatar);
+            AvatarPrefab avatarPrefab = _container.InstantiateComponent<AvatarPrefab>(avatar, new object[] {AvatarPrefab.AvatarFormat.AVATAR_FORMAT_VRM});
             avatarPrefab.name = $"AvatarPrefab({avatarPrefab.descriptor.name})";
-            avatarPrefab.gameObject.SetActive(false); //set the AvatarPrefab as Not Active [instantiated avatars will be set as active].
 
             _tasks.Remove(path);
 

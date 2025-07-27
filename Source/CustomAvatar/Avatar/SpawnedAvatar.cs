@@ -94,6 +94,7 @@ namespace CustomAvatar.Avatar
                     VRM.VRMFirstPerson.THIRDPERSON_ONLY_LAYER = CustomAvatar.Avatar.AvatarLayers.kOnlyInThirdPerson;
                     vrmFirstPerson.Setup();
                 }
+                // TODO: VRM 1.x firstperson
             }
         }
 

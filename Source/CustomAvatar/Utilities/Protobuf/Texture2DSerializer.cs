@@ -76,6 +76,11 @@ namespace CustomAvatar.Utilities.Protobuf
                 }
             }
 
+            if (!SystemInfo.IsFormatSupported(graphicsFormat, FormatUsage.Sample))
+            {
+                return null;
+            }
+
             // TODO: who's responsible for this object's lifecycle? currently relies on Resources.UnloadUnusedAssets to get cleaned up
             value = new Texture2D(width, height, graphicsFormat, mipmapCount, TextureCreationFlags.None)
             {

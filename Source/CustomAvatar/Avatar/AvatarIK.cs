@@ -84,7 +84,10 @@ namespace CustomAvatar.Avatar
                 twistRelaxer.ik = this;
             }
 
-            _defaultRootPose = new Pose(vrikManager.references_root.localPosition, vrikManager.references_root.localRotation);
+            if (vrikManager != null) // TODO: why is this null?
+            {
+                _defaultRootPose = new Pose(vrikManager.references_root.localPosition, vrikManager.references_root.localRotation);
+            }
         }
 
         protected void OnEnable()

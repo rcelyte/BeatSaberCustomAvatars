@@ -95,7 +95,19 @@ namespace CustomAvatar.Avatar
             spawnedAvatar.avatarFormat = avatar.avatarFormat;
             if (spawnedAvatar.avatarFormat == AvatarPrefab.AvatarFormat.AVATAR_FORMAT_VRM)
             {
-                spawnedAvatar.gameObject.SetActive(true);
+                UniVRM10.Vrm10Instance vrm10Instance = avatarInstance.GetComponentInChildren<UniVRM10.Vrm10Instance>();
+                if (vrm10Instance != null && vrm10Instance.TryGetComponent(out UniGLTF.RuntimeGltfInstance runtime))
+                {
+                    List<Transform> _nodes = (List<Transform>)typeof(UniGLTF.RuntimeGltfInstance)
+                        .GetField("_nodes", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(runtime);
+                    Dictionary<Transform, UniGLTF.Utils.TransformState> _initialTransformStates = (Dictionary<Transform, UniGLTF.Utils.TransformState>)typeof(UniGLTF.RuntimeGltfInstance)
+                        .GetField("_initialTransformStates", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(runtime);
+                    foreach (Transform node in vrm10Instance.transform.GetComponentsInChildren<Transform>())
+                    {
+                        _nodes.Add(node);
+                        _initialTransformStates.Add(node, new UniGLTF.Utils.TransformState(node));
+                    }
+                }
             }
 
             subContainer.Bind<SpawnedAvatar>().FromInstance(spawnedAvatar);

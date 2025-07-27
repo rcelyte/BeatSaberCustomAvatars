@@ -106,9 +106,9 @@ namespace CustomAvatar.Avatar
 
         [Inject]
         [UsedImplicitly]
-        private void Construct(ILoggerFactory loggerFactory, DiContainer container)
+        private void Construct(ILoggerFactory loggerFactory, DiContainer container, AvatarFormat format)
         {
-            avatarFormat = GetComponentInChildren<VRM.VRMFirstPerson>() ? AvatarFormat.AVATAR_FORMAT_VRM : AvatarFormat.AVATAR_FORMAT_CUSTOM;
+            avatarFormat = format;
             descriptor = GetComponent<AvatarDescriptor>();
 
             if (descriptor == null)
