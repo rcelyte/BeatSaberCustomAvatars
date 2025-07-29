@@ -252,24 +252,15 @@ namespace CustomAvatar.Avatar
 
                 GameObject leftHand = new("LeftHand");
                 leftHand.transform.SetParent(avatar.transform);
+                ik.solver_leftArm_target = leftHand.transform;
+
                 GameObject rightHand = new("RightHand");
                 rightHand.transform.SetParent(avatar.transform);
-
-                GameObject leftHandTarget = new("LeftHandTarget");
-                //adjust hand and wrist locations [wrt Saber Stick]
-                leftHandTarget.transform.SetParent(leftHand.transform);
-                leftHandTarget.transform.eulerAngles = new Vector3(-10f, 0f, 90f); //rotate wrist to standard natural angle.
-                ik.solver_leftArm_target = leftHandTarget.transform;
-
-                GameObject rightHandTarget = new("RightHandTarget");
-                //adjust hand and wrist locations [wrt Saber Stick]
-                rightHandTarget.transform.SetParent(rightHand.transform);
-                rightHandTarget.transform.eulerAngles = new Vector3(-10f, 0f, -90f); //rotate wrist to standard natural angle.
-                ik.solver_rightArm_target = rightHandTarget.transform;
+                ik.solver_rightArm_target = rightHand.transform;
 
                 GameObject head = new("Head");
                 head.transform.SetParent(avatar.transform);
-                head.transform.position = ik.references_head.position;// = vrmFirstPersonHeadBone.position + vrmFirstPersonOffset;
+                head.transform.position = ik.references_head.position;
 
                 GameObject headViewpoint = new("HeadViewPoint");
                 headViewpoint.transform.SetParent(head.transform);

@@ -21,6 +21,7 @@ using CustomAvatar.Logging;
 using CustomAvatar.Tracking;
 using UniGLTF;
 using UnityEngine;
+using UnityEngine.XR.Hands;
 using Zenject;
 using Object = UnityEngine.Object;
 
@@ -43,7 +44,6 @@ namespace CustomAvatar.Avatar
 
             RegisterComponent<AvatarTransformTracking>(avatar => avatar.head || avatar.leftHand || avatar.rightHand || avatar.pelvis || avatar.leftLeg || avatar.rightLeg);
             RegisterComponent<AvatarIK>(avatar => avatar.isIKAvatar);
-            RegisterComponent<AvatarFingerTracking>(avatar => avatar.supportsFingerTracking);
             RegisterComponent<AvatarFaceTracking>(avatar => avatar.supportsFaceTracking);
         }
 
@@ -103,6 +103,66 @@ namespace CustomAvatar.Avatar
             {
                 _logger.LogInformation($"Adding component '{type.FullName}'");
                 avatarInstance.AddComponent(type);
+            }
+
+            if (avatar.supportsFingerTracking)
+            {
+                Animator animator = avatarInstance.GetComponentInChildren<Animator>();
+                foreach ((GameObject hand, bool right) in new[] {(spawnedAvatar.leftHand.gameObject, false), (spawnedAvatar.rightHand.gameObject, true)})
+                {
+                    hand.AddComponent<XRHandTrackingEvents>().handedness = right ? Handedness.Right : Handedness.Left;
+                    Transform wrist = animator.GetBoneTransform(right ? HumanBodyBones.RightHand : HumanBodyBones.LeftHand);
+                    // Transform palm = animator.GetBoneTransform(right ? HumanBodyBones.RightPalm : HumanBodyBones.LeftPalm);
+                    Transform thumbProximal = animator.GetBoneTransform(right ? HumanBodyBones.RightThumbProximal : HumanBodyBones.LeftThumbProximal);
+                    Transform thumbDistal = animator.GetBoneTransform(right ? HumanBodyBones.RightThumbDistal : HumanBodyBones.LeftThumbDistal);
+                    // Transform thumbTip = animator.GetBoneTransform(right ? HumanBodyBones.RightThumbTip : HumanBodyBones.LeftThumbTip);
+                    Transform indexProximal = animator.GetBoneTransform(right ? HumanBodyBones.RightIndexProximal : HumanBodyBones.LeftIndexProximal);
+                    Transform indexIntermediate = animator.GetBoneTransform(right ? HumanBodyBones.RightIndexIntermediate : HumanBodyBones.LeftIndexIntermediate);
+                    Transform indexDistal = animator.GetBoneTransform(right ? HumanBodyBones.RightIndexDistal : HumanBodyBones.LeftIndexDistal);
+                    // Transform indexTip = animator.GetBoneTransform(right ? HumanBodyBones.RightIndexTip : HumanBodyBones.LeftIndexTip);
+                    Transform middleProximal = animator.GetBoneTransform(right ? HumanBodyBones.RightMiddleProximal : HumanBodyBones.LeftMiddleProximal);
+                    Transform middleIntermediate = animator.GetBoneTransform(right ? HumanBodyBones.RightMiddleIntermediate : HumanBodyBones.LeftMiddleIntermediate);
+                    Transform middleDistal = animator.GetBoneTransform(right ? HumanBodyBones.RightMiddleDistal : HumanBodyBones.LeftMiddleDistal);
+                    // Transform middleTip = animator.GetBoneTransform(right ? HumanBodyBones.RightMiddleTip : HumanBodyBones.LeftMiddleTip);
+                    Transform ringProximal = animator.GetBoneTransform(right ? HumanBodyBones.RightRingProximal : HumanBodyBones.LeftRingProximal);
+                    Transform ringIntermediate = animator.GetBoneTransform(right ? HumanBodyBones.RightRingIntermediate : HumanBodyBones.LeftRingIntermediate);
+                    Transform ringDistal = animator.GetBoneTransform(right ? HumanBodyBones.RightRingDistal : HumanBodyBones.LeftRingDistal);
+                    // Transform ringTip = animator.GetBoneTransform(right ? HumanBodyBones.RightRingTip : HumanBodyBones.LeftRingTip);
+                    Transform littleProximal = animator.GetBoneTransform(right ? HumanBodyBones.RightLittleProximal : HumanBodyBones.LeftLittleProximal);
+                    Transform littleIntermediate = animator.GetBoneTransform(right ? HumanBodyBones.RightLittleIntermediate : HumanBodyBones.LeftLittleIntermediate);
+                    Transform littleDistal = animator.GetBoneTransform(right ? HumanBodyBones.RightLittleDistal : HumanBodyBones.LeftLittleDistal);
+                    // Transform littleTip = animator.GetBoneTransform(right ? HumanBodyBones.RightLittleTip : HumanBodyBones.LeftLittleTip);
+                    XRHandSkeletonDriver skeletonDriver = hand.AddComponent<XRHandSkeletonDriver>();
+                    skeletonDriver.rootTransform = wrist;
+                    skeletonDriver.jointTransformReferences = new(new JointToTransformReference[] {
+                        new() {xrHandJointID = XRHandJointID.Wrist, jointTransform = wrist},
+                        // new() {xrHandJointID = XRHandJointID.Palm, jointTransform = palm},
+                        // new() {xrHandJointID = XRHandJointID.ThumbMetacarpal, jointTransform = },
+                        new() {xrHandJointID = XRHandJointID.ThumbProximal, jointTransform = thumbProximal},
+                        new() {xrHandJointID = XRHandJointID.ThumbDistal, jointTransform = thumbDistal},
+                        // new() {xrHandJointID = XRHandJointID.ThumbTip, jointTransform = thumbTip},
+                        // new() {xrHandJointID = XRHandJointID.IndexMetacarpal, jointTransform = },
+                        new() {xrHandJointID = XRHandJointID.IndexProximal, jointTransform = indexProximal},
+                        new() {xrHandJointID = XRHandJointID.IndexIntermediate, jointTransform = indexIntermediate},
+                        new() {xrHandJointID = XRHandJointID.IndexDistal, jointTransform = indexDistal},
+                        // new() {xrHandJointID = XRHandJointID.IndexTip, jointTransform = indexTip},
+                        // new() {xrHandJointID = XRHandJointID.MiddleMetacarpal, jointTransform = },
+                        new() {xrHandJointID = XRHandJointID.MiddleProximal, jointTransform = middleProximal},
+                        new() {xrHandJointID = XRHandJointID.MiddleIntermediate, jointTransform = middleIntermediate},
+                        new() {xrHandJointID = XRHandJointID.MiddleDistal, jointTransform = middleDistal},
+                        // new() {xrHandJointID = XRHandJointID.MiddleTip, jointTransform = middleTip},
+                        // new() {xrHandJointID = XRHandJointID.RingMetacarpal, jointTransform = },
+                        new() {xrHandJointID = XRHandJointID.RingProximal, jointTransform = ringProximal},
+                        new() {xrHandJointID = XRHandJointID.RingIntermediate, jointTransform = ringIntermediate},
+                        new() {xrHandJointID = XRHandJointID.RingDistal, jointTransform = ringDistal},
+                        // new() {xrHandJointID = XRHandJointID.RingTip, jointTransform = ringTip},
+                        // new() {xrHandJointID = XRHandJointID.LittleMetacarpal, jointTransform = },
+                        new() {xrHandJointID = XRHandJointID.LittleProximal, jointTransform = littleProximal},
+                        new() {xrHandJointID = XRHandJointID.LittleIntermediate, jointTransform = littleIntermediate},
+                        new() {xrHandJointID = XRHandJointID.LittleDistal, jointTransform = littleDistal},
+                        // new() {xrHandJointID = XRHandJointID.LittleTip, jointTransform = littleTip},
+                    });
+                }
             }
 
             if (spawnedAvatar.avatarFormat == AvatarPrefab.AvatarFormat.AVATAR_FORMAT_VRM && spawnedAvatar.ik == null && spawnedAvatar.TryGetComponent(out AvatarIK ik))

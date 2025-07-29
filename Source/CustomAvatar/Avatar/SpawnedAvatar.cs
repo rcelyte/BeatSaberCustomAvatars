@@ -57,7 +57,6 @@ namespace CustomAvatar.Avatar
         public void VRM_SetAvatarIK(AvatarIK _ik) { ik = _ik; }
         internal AvatarTransformTracking transformTracking { get; private set; }
         internal AvatarIK ik { get; private set; }
-        internal AvatarFingerTracking fingerTracking { get; private set; }
         internal EventManager eventManager { get; private set; }
 
         private ILogger<SpawnedAvatar> _logger;
@@ -126,7 +125,6 @@ namespace CustomAvatar.Avatar
 
             transformTracking = GetComponent<AvatarTransformTracking>();
             ik = GetComponent<AvatarIK>();
-            fingerTracking = GetComponent<AvatarFingerTracking>();
 
             if (avatarFormat == AvatarPrefab.AvatarFormat.AVATAR_FORMAT_VRM)
             {

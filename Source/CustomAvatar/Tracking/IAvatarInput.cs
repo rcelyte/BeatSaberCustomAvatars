@@ -26,8 +26,6 @@ namespace CustomAvatar.Tracking
 
         bool TryGetTransform(DeviceUse use, out Transform transform);
 
-        bool TryGetFingerCurl(DeviceUse use, out FingerCurl curl);
-
         public IReadOnlyDictionary<string, float> shapeWeights { get; }
     }
 }

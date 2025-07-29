@@ -185,12 +185,13 @@ namespace CustomAvatar.Avatar
             isIKAvatar = vrikManager != null && vrikManager.areReferencesFilled;
             if (avatarFormat == AvatarFormat.AVATAR_FORMAT_CUSTOM)
             {
-                supportsFingerTracking = poseManager && poseManager.isValid;
+                Animator animator = GetComponentInChildren<Animator>();
+                supportsFingerTracking = animator && animator.isHuman;
                 supportsFaceTracking = false;
             }
             else
             {
-                supportsFingerTracking = false;
+                supportsFingerTracking = true; // TODO: condition
                 supportsFaceTracking = true; // TODO: check if avatar contains at least one blendshape of type `BlendShapePreset.Unknown`
             }
 

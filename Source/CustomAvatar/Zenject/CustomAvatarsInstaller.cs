@@ -37,12 +37,10 @@ namespace CustomAvatar.Zenject
 {
     internal class CustomAvatarsInstaller : BaseInstaller
     {
-        private const string kXRHandsID = "Unity.XR.Hands";
         private const string kOpenVRID = "OpenVR";
 
         public static readonly int kPlayerAvatarManagerExecutionOrder = 1000;
 
-        private static readonly VersionRange kXRHandsVersionRange = new("^1.1.0");
         private static readonly VersionRange kOpenVRVersionRange = new("^2.0.0");
 
         private static readonly MethodInfo kCreateLoggerMethod = typeof(ILoggerFactory).GetMethod(nameof(ILoggerFactory.CreateLogger), BindingFlags.Public | BindingFlags.Instance);
@@ -80,15 +78,6 @@ namespace CustomAvatar.Zenject
             {
                 Container.Bind(typeof(IDeviceProvider), typeof(IInitializable), typeof(IDisposable)).To<UnityXRDeviceProvider>().AsSingle();
 
-                if (IsPluginLoadedAndMatchesVersion(kXRHandsID, kXRHandsVersionRange))
-                {
-                    Container.Bind(typeof(IFingerTrackingProvider), typeof(ITickable)).To<UnityXRFingerTrackingProvider>().AsSingle();
-                }
-                else
-                {
-                    Container.Bind(typeof(IFingerTrackingProvider)).To<DevicelessFingerTrackingProvider>().AsSingle();
-                }
-
                 // SteamVR doesn't yet support render models through OpenXR so we need this workaround
                 if (IsPluginLoadedAndMatchesVersion(kOpenVRID, kOpenVRVersionRange))
                 {
@@ -98,7 +87,6 @@ namespace CustomAvatar.Zenject
             else
             {
                 Container.Bind(typeof(IDeviceProvider), typeof(IInitializable), typeof(IDisposable)).To<GenericDeviceProvider>().AsSingle();
-                Container.Bind(typeof(IFingerTrackingProvider)).To<DevicelessFingerTrackingProvider>().AsSingle();
             }
 
             // managers

@@ -41,19 +41,16 @@ namespace CustomAvatar.Player
     {
         private readonly ILogger<VRPlayerInput> _logger;
         private readonly TrackingRig _trackingRig;
-        private readonly IFingerTrackingProvider _fingerTrackingProvider;
         private readonly GazeNode _gaze = new();
         private readonly Dictionary<string, float> _shapeWeights = new();
         private CancellationTokenSource _oscCancellationTokenSource;
 
         protected VRPlayerInput(
             ILogger<VRPlayerInput> logger,
-            TrackingRig trackingRig,
-            IFingerTrackingProvider fingerTrackingProvider)
+            TrackingRig trackingRig)
         {
             _logger = logger;
             _trackingRig = trackingRig;
-            _fingerTrackingProvider = fingerTrackingProvider;
         }
 
         public event Action inputChanged;
@@ -128,8 +125,6 @@ namespace CustomAvatar.Player
 
             return node.isTracking && node.isCalibrated;
         }
-
-        public bool TryGetFingerCurl(DeviceUse use, out FingerCurl curl) => _fingerTrackingProvider.TryGetFingerCurl(use, out curl);
 
         private void OnTrackingRigChanged()
         {
