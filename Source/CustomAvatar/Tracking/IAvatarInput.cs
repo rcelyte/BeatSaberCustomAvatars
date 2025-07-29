@@ -15,6 +15,7 @@
 //  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace CustomAvatar.Tracking
@@ -26,5 +27,7 @@ namespace CustomAvatar.Tracking
         bool TryGetTransform(DeviceUse use, out Transform transform);
 
         bool TryGetFingerCurl(DeviceUse use, out FingerCurl curl);
+
+        public IReadOnlyDictionary<string, float> shapeWeights { get; }
     }
 }

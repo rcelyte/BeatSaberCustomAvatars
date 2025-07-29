@@ -14,9 +14,11 @@
 //  You should have received a copy of the GNU Lesser General Public License
 //  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+extern alias BeatSaberProtobuf;
+
 using System;
-using ProtoBuf;
-using ProtoBuf.Serializers;
+using BeatSaberProtobuf::ProtoBuf;
+using BeatSaberProtobuf::ProtoBuf.Serializers;
 using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;

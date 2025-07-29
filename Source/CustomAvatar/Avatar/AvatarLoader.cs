@@ -24,7 +24,6 @@ using AssetBundleLoadingTools.Utilities;
 using CustomAvatar.Exceptions;
 using CustomAvatar.Logging;
 using CustomAvatar.Utilities;
-using CustomAvatar.VRMAvatar;
 using IPA.Utilities;
 using IPA.Utilities.Async;
 using UniGLTF;
@@ -195,7 +194,7 @@ namespace CustomAvatar.Avatar
             _logger.LogInformation("Vrm: loading.");
             RuntimeOnlyAwaitCaller awaitCaller = new();
             Vrm10Instance vrm10Instance = null;
-            MonoBehaviour instance;
+            RuntimeGltfInstance gltfInstance;
             using (GltfData gltfData = await awaitCaller.Run(() => new GlbLowLevelParser(path, File.ReadAllBytes(path)).Parse()))
             {
                 if (UniGLTF.Extensions.VRMC_vrm.GltfDeserializer.TryGet(gltfData.GLTF.extensions, out UniGLTF.Extensions.VRMC_vrm.VRMC_vrm _))
@@ -203,16 +202,15 @@ namespace CustomAvatar.Avatar
                     vrm10Instance = await Vrm10.LoadGltfDataAsync(gltfData, canLoadVrm0X: false, showMeshes: true, awaitCaller: awaitCaller);
                     await vrm10Instance.Vrm.FirstPerson.SetupAsync(vrm10Instance.gameObject, awaitCaller, true,
                         CustomAvatar.Avatar.AvatarLayers.kAlwaysVisible, CustomAvatar.Avatar.AvatarLayers.kOnlyInThirdPerson);
-                    instance = vrm10Instance;
+                    gltfInstance = vrm10Instance.GetComponent<RuntimeGltfInstance>();
                 }
                 else if (glTF_VRM_extensions.TryDeserialize(gltfData.GLTF.extensions, out glTF_VRM_extensions _))
                 {
                     VRMData vrm = new(gltfData);
                     using (VRMImporterContext loader = new(vrm, materialGenerator: materialCallback(vrm.VrmExtension)))
                     {
-                        RuntimeGltfInstance vrm0Instance = await loader.LoadAsync(awaitCaller);
-                        vrm0Instance.ShowMeshes();
-                        instance = vrm0Instance;
+                        gltfInstance = await loader.LoadAsync(awaitCaller);
+                        gltfInstance.ShowMeshes();
                     }
                 }
                 else
@@ -221,24 +219,24 @@ namespace CustomAvatar.Avatar
                 }
             }
 
-            Animator animator = instance.GetComponent<Animator>();
+            Animator animator = gltfInstance.GetComponent<Animator>();
             GameObject avatar = new("Avatar");
+            GameObject.DontDestroyOnLoad(avatar);
             avatar.SetActive(false);
 
             {
                 _logger.LogInformation("New VRM Avatar");
-                GameObject.DontDestroyOnLoad(avatar);
 
-                instance.transform.SetParent(avatar.transform, false);
+                gltfInstance.transform.SetParent(avatar.transform, false);
 
-                VRIKManager ik = instance.gameObject.AddComponent<VRIKManager>();
+                VRIKManager ik = gltfInstance.gameObject.AddComponent<VRIKManager>();
                 ik.AutoDetectReferences();
 
                 Transform vrmFirstPersonHeadBone;
                 Vector3 vrmFirstPersonOffset;
                 if (vrm10Instance == null)
                 {
-                    VRMFirstPerson firstPerson = instance.GetComponent<VRMFirstPerson>();
+                    VRMFirstPerson firstPerson = gltfInstance.GetComponent<VRMFirstPerson>();
                     firstPerson.Setup();
                     vrmFirstPersonHeadBone = firstPerson.FirstPersonBone;
                     vrmFirstPersonOffset = firstPerson.FirstPersonOffset;
@@ -261,14 +259,12 @@ namespace CustomAvatar.Avatar
                 //adjust hand and wrist locations [wrt Saber Stick]
                 leftHandTarget.transform.SetParent(leftHand.transform);
                 leftHandTarget.transform.eulerAngles = new Vector3(-10f, 0f, 90f); //rotate wrist to standard natural angle.
-                leftHandTarget.transform.position = VRMHandAndLegPositionConstants.GetWrist(ik.references_leftHand, false); //curl fingers
                 ik.solver_leftArm_target = leftHandTarget.transform;
 
                 GameObject rightHandTarget = new("RightHandTarget");
                 //adjust hand and wrist locations [wrt Saber Stick]
                 rightHandTarget.transform.SetParent(rightHand.transform);
                 rightHandTarget.transform.eulerAngles = new Vector3(-10f, 0f, -90f); //rotate wrist to standard natural angle.
-                rightHandTarget.transform.position = VRMHandAndLegPositionConstants.GetWrist(ik.references_rightHand, true); //get wrist position. then curl fingers.
                 ik.solver_rightArm_target = rightHandTarget.transform;
 
                 GameObject head = new("Head");
@@ -293,7 +289,7 @@ namespace CustomAvatar.Avatar
                     if (meta.Thumbnail != null)
                         descriptor.cover = Sprite.Create(meta.Thumbnail, new Rect(0, 0, meta.Thumbnail.width, meta.Thumbnail.height), Vector2.zero);
                 }
-                else if (instance.TryGetComponent(out VRMMeta meta))
+                else if (gltfInstance.TryGetComponent(out VRMMeta meta))
                 {
                     descriptor.name = meta.Meta.Title;
                     descriptor.author = meta.Meta.Author;

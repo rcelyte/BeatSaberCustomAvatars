@@ -24,6 +24,7 @@ namespace CustomAvatar.Tracking
         Waist,
         LeftFoot,
         RightFoot,
+        Gaze,
         Unknown
     }
 }

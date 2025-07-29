@@ -14,6 +14,8 @@
 //  You should have received a copy of the GNU Lesser General Public License
 //  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+extern alias BeatSaberProtobuf;
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -22,8 +24,8 @@ using CustomAvatar.Logging;
 using CustomAvatar.Player;
 using CustomAvatar.Utilities;
 using IPA.Utilities;
-using ProtoBuf;
-using ProtoBuf.Meta;
+using BeatSaberProtobuf::ProtoBuf;
+using BeatSaberProtobuf::ProtoBuf.Meta;
 using UnityEngine;
 using Zenject;
 

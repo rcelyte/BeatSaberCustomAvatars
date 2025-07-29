@@ -57,6 +57,11 @@ namespace CustomAvatar.Avatar
         public bool supportsFingerTracking { get; private set; }
 
         /// <summary>
+        /// Whether or not this avatar supports face tracking.
+        /// </summary>
+        public bool supportsFaceTracking { get; private set; }
+
+        /// <summary>
         /// The avatar's eye height.
         /// </summary>
         public float eyeHeight { get; private set; }
@@ -179,9 +184,15 @@ namespace CustomAvatar.Avatar
 
             isIKAvatar = vrikManager != null && vrikManager.areReferencesFilled;
             if (avatarFormat == AvatarFormat.AVATAR_FORMAT_CUSTOM)
+            {
                 supportsFingerTracking = poseManager && poseManager.isValid;
+                supportsFaceTracking = false;
+            }
             else
+            {
                 supportsFingerTracking = false;
+                supportsFaceTracking = true; // TODO: check if avatar contains at least one blendshape of type `BlendShapePreset.Unknown`
+            }
 
             eyeHeight = GetEyeHeight();
             armSpan = GetArmSpan(vrikManager);

@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Linq;
 using CustomAvatar.Logging;
 using CustomAvatar.Tracking;
+using UniGLTF;
 using UnityEngine;
 using Zenject;
 using Object = UnityEngine.Object;
@@ -40,9 +41,10 @@ namespace CustomAvatar.Avatar
             _container = container;
             _logger = logger;
 
-            RegisterComponent<AvatarTransformTracking>(ShouldAddTransformTracking);
-            RegisterComponent<AvatarIK>(ShouldAddIK);
-            RegisterComponent<AvatarFingerTracking>(ShouldAddFingerTracking);
+            RegisterComponent<AvatarTransformTracking>(avatar => avatar.head || avatar.leftHand || avatar.rightHand || avatar.pelvis || avatar.leftLeg || avatar.rightLeg);
+            RegisterComponent<AvatarIK>(avatar => avatar.isIKAvatar);
+            RegisterComponent<AvatarFingerTracking>(avatar => avatar.supportsFingerTracking);
+            RegisterComponent<AvatarFaceTracking>(avatar => avatar.supportsFaceTracking);
         }
 
         public void RegisterComponent<T>(Func<AvatarPrefab, bool> condition = null) where T : MonoBehaviour
@@ -85,6 +87,7 @@ namespace CustomAvatar.Avatar
 
             GameObject avatarInstance = Object.Instantiate(avatar, parent, false).gameObject;
             Object.DestroyImmediate(avatarInstance.GetComponent<AvatarPrefab>());
+            Object.DestroyImmediate(avatarInstance.GetComponentInChildren<RuntimeGltfInstance>());
 
             DiContainer subContainer = new(_container);
             subContainer.Bind<AvatarPrefab>().FromInstance(avatar);
@@ -93,59 +96,24 @@ namespace CustomAvatar.Avatar
             // SpawnedAvatar needs to be instantiated first since other behaviours depend on it
             SpawnedAvatar spawnedAvatar = subContainer.InstantiateComponent<SpawnedAvatar>(avatarInstance);
             spawnedAvatar.avatarFormat = avatar.avatarFormat;
-            if (spawnedAvatar.avatarFormat == AvatarPrefab.AvatarFormat.AVATAR_FORMAT_VRM)
-            {
-                UniVRM10.Vrm10Instance vrm10Instance = avatarInstance.GetComponentInChildren<UniVRM10.Vrm10Instance>();
-                if (vrm10Instance != null && vrm10Instance.TryGetComponent(out UniGLTF.RuntimeGltfInstance runtime))
-                {
-                    List<Transform> _nodes = (List<Transform>)typeof(UniGLTF.RuntimeGltfInstance)
-                        .GetField("_nodes", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(runtime);
-                    Dictionary<Transform, UniGLTF.Utils.TransformState> _initialTransformStates = (Dictionary<Transform, UniGLTF.Utils.TransformState>)typeof(UniGLTF.RuntimeGltfInstance)
-                        .GetField("_initialTransformStates", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(runtime);
-                    foreach (Transform node in vrm10Instance.transform.GetComponentsInChildren<Transform>())
-                    {
-                        _nodes.Add(node);
-                        _initialTransformStates.Add(node, new UniGLTF.Utils.TransformState(node));
-                    }
-                }
-            }
 
             subContainer.Bind<SpawnedAvatar>().FromInstance(spawnedAvatar);
 
-            foreach ((Type type, Func<AvatarPrefab, bool> condition) in _componentsToAdd)
+            foreach (Type type in from entry in _componentsToAdd where (entry.condition == null || entry.condition(avatar)) select entry.type)
             {
-                if (condition == null || condition(avatar))
-                {
-                    _logger.LogInformation($"Adding component '{type.FullName}'");
-                    avatarInstance.AddComponent(type);
-                }
+                _logger.LogInformation($"Adding component '{type.FullName}'");
+                avatarInstance.AddComponent(type);
             }
 
-            if (spawnedAvatar.avatarFormat == AvatarPrefab.AvatarFormat.AVATAR_FORMAT_VRM)
+            if (spawnedAvatar.avatarFormat == AvatarPrefab.AvatarFormat.AVATAR_FORMAT_VRM && spawnedAvatar.ik == null && spawnedAvatar.TryGetComponent(out AvatarIK ik))
             {
-                if (spawnedAvatar.ik == null && spawnedAvatar.GetComponent<AvatarIK>())
-                    spawnedAvatar.VRM_SetAvatarIK(spawnedAvatar.GetComponent<AvatarIK>());
+                spawnedAvatar.VRM_SetAvatarIK(ik);
             }
 
             subContainer.InjectGameObject(avatarInstance);
             avatarInstance.SetActive(true);
 
             return spawnedAvatar;
-        }
-
-        private bool ShouldAddTransformTracking(AvatarPrefab avatarPrefab)
-        {
-            return avatarPrefab.head || avatarPrefab.leftHand || avatarPrefab.rightHand || avatarPrefab.pelvis || avatarPrefab.leftLeg || avatarPrefab.rightLeg;
-        }
-
-        private bool ShouldAddIK(AvatarPrefab avatar)
-        {
-            return avatar.isIKAvatar;
-        }
-
-        private bool ShouldAddFingerTracking(AvatarPrefab avatar)
-        {
-            return avatar.supportsFingerTracking;
         }
     }
 }

@@ -14,14 +14,16 @@
 //  You should have received a copy of the GNU Lesser General Public License
 //  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+extern alias BeatSaberProtobuf;
+
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using CustomAvatar.Avatar;
 using CustomAvatar.Utilities;
 using CustomAvatar.Utilities.Protobuf;
-using ProtoBuf;
-using ProtoBuf.Meta;
+using BeatSaberProtobuf::ProtoBuf;
+using BeatSaberProtobuf::ProtoBuf.Meta;
 using UnityEngine;
 
 namespace CustomAvatar.Player

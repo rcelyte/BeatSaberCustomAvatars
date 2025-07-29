@@ -6,6 +6,7 @@
     <NoWarn>CS1570;CS1572;CS1573;CS1587;CS1591;CS1711</NoWarn>
     <DefineConstants>NET_4_6;UNITY_2017_1_OR_NEWER;UNITY_2017_3_OR_NEWER;UNITY_2018_1_OR_NEWER;UNITY_2018_2_OR_NEWER;UNITY_2019;UNITY_2019_1_OR_NEWER;UNITY_2020_1_OR_NEWER;UNITY_2020_2_OR_NEWER;UNITY_2020_3_OR_NEWER;UNITY_2021_2_OR_NEWER;UNITY_2021_OR_NEWER;UNITY_2022_3_OR_NEWER;UNITY_2022_OR_NEWER;UNITY_5_5_OR_NEWER;UNITY_5_6_OR_NEWER</DefineConstants>
     <!-- <DefineConstants>UNITY_2022_2_OR_NEWER</DefineConstants> -->
+    <!-- TODO: USE_COM_UNITY_CLOUD_KTX (requires com.unity.cloud.ktx@3.3.0) -->
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../UniVRM/Assets/UniGLTF/Runtime/**/*.cs" />
@@ -44,7 +45,7 @@
     <Reference Include="Main" Publicize="True" />
     <Reference Include="Newtonsoft.Json" />
     <Reference Include="OpenVR" />
-    <Reference Include="protobuf-net" />
+    <Reference Include="protobuf-net" Aliases="BeatSaberProtobuf" />
     <Reference Include="Rendering" Publicize="True" />
     <Reference Include="SiraUtil" />
     <Reference Include="Unity.InputSystem" />

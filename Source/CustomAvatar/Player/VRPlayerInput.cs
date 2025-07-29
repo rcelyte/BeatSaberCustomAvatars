@@ -15,24 +15,43 @@
 //  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System;
+using System.Collections.Generic;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+using System.Threading;
+using CustomAvatar.Logging;
 using CustomAvatar.Tracking;
 using UnityEngine;
 using Zenject;
 
 namespace CustomAvatar.Player
 {
+    internal class GazeNode : ITrackedNode
+    {
+        public Transform offset => null;
+        public bool isTracking => false;
+        public bool isCalibrated => false;
+    }
+
     /// <summary>
     /// The player's <see cref="IAvatarInput"/> with calibration and other settings applied.
     /// </summary>
     internal class VRPlayerInput : IInitializable, IDisposable, IAvatarInput
     {
+        private readonly ILogger<VRPlayerInput> _logger;
         private readonly TrackingRig _trackingRig;
         private readonly IFingerTrackingProvider _fingerTrackingProvider;
+        private readonly GazeNode _gaze = new();
+        private readonly Dictionary<string, float> _shapeWeights = new();
+        private CancellationTokenSource _oscCancellationTokenSource;
 
         protected VRPlayerInput(
+            ILogger<VRPlayerInput> logger,
             TrackingRig trackingRig,
             IFingerTrackingProvider fingerTrackingProvider)
         {
+            _logger = logger;
             _trackingRig = trackingRig;
             _fingerTrackingProvider = fingerTrackingProvider;
         }
@@ -41,12 +60,54 @@ namespace CustomAvatar.Player
 
         public void Initialize()
         {
+            _oscCancellationTokenSource = new();
+            Socket socket = new(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            try
+            {
+                socket.Bind(new IPEndPoint(IPAddress.Loopback, 9000));
+                _logger.LogInformation($"Bound port UDP/9000");
+                HandleOsc(socket, _oscCancellationTokenSource.Token);
+            }
+            catch (SocketException ex)
+            {
+                _logger.LogError($"Could not bind to recv endpoint: {ex.Message}");
+            }
             _trackingRig.trackingChanged += OnTrackingRigChanged;
         }
 
         public void Dispose()
         {
             _trackingRig.trackingChanged -= OnTrackingRigChanged;
+            _oscCancellationTokenSource?.Cancel();
+        }
+
+        private async void HandleOsc(Socket socket, CancellationToken cancellationToken)
+        {
+            void Process(ReadOnlySpan<byte> packet) {
+                foreach (OscMessage message in new OscPacket(packet))
+                {
+                    if (message.length != 1 || message[0].asFloat is not float value)
+                    {
+                        continue;
+                    }
+                    string key = Char.ToUpper((char)message.address[1]) + Encoding.UTF8.GetString(message.address.Slice(2));
+                    if (!_shapeWeights.ContainsKey(key))
+                    {
+                        _logger.LogInformation($"New OSC value: `{key}`");
+                    }
+                    _shapeWeights[key] = value;
+                }
+            }
+            byte[] buffer = new byte[4096];
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                int length = await socket.ReceiveAsync(buffer, SocketFlags.None, cancellationToken);
+                try
+                {
+                    Process(new(buffer, 0, length));
+                }
+                catch (Exception) {}
+            }
         }
 
         public bool TryGetTransform(DeviceUse use, out Transform transform)
@@ -59,6 +120,7 @@ namespace CustomAvatar.Player
                 DeviceUse.Waist => _trackingRig.pelvis,
                 DeviceUse.LeftFoot => _trackingRig.leftFoot,
                 DeviceUse.RightFoot => _trackingRig.rightFoot,
+                DeviceUse.Gaze => _gaze,
                 _ => throw new InvalidOperationException($"Unexpected device use {use}"),
             };
 
@@ -73,5 +135,7 @@ namespace CustomAvatar.Player
         {
             inputChanged?.Invoke();
         }
+
+        public IReadOnlyDictionary<string, float> shapeWeights => _shapeWeights;
     }
 }

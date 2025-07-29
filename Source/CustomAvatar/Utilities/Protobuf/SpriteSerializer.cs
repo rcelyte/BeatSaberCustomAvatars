@@ -14,8 +14,10 @@
 //  You should have received a copy of the GNU Lesser General Public License
 //  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-using ProtoBuf;
-using ProtoBuf.Serializers;
+extern alias BeatSaberProtobuf;
+
+using BeatSaberProtobuf::ProtoBuf;
+using BeatSaberProtobuf::ProtoBuf.Serializers;
 using UnityEngine;
 
 namespace CustomAvatar.Utilities.Protobuf
